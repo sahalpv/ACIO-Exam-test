@@ -2,7 +2,30 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { Question } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+let ai: GoogleGenAI | null = null;
+
+// This function ensures the API key is available and initializes the client.
+// It throws a clear error if the API key is missing.
+const getClient = (): GoogleGenAI => {
+    if (ai) {
+        return ai;
+    }
+
+    // In a browser environment for a static site, `process` is not defined unless a build tool polyfills it.
+    // This check prevents a "process is not defined" reference error.
+    const apiKey = (typeof process !== 'undefined' && process.env) ? process.env.API_KEY : undefined;
+
+    if (!apiKey) {
+        throw new Error(
+            "Configuration Error: The Gemini API key is missing. " +
+            "Please ensure the API_KEY environment variable is set in your hosting environment."
+        );
+    }
+    
+    ai = new GoogleGenAI({ apiKey });
+    return ai;
+};
+
 
 const questionSchema = {
     type: Type.ARRAY,
@@ -44,7 +67,8 @@ For each question, provide the required JSON fields. Ensure the difficulty level
 
 export const generateQuizQuestions = async (): Promise<Question[]> => {
   try {
-    const response = await ai.models.generateContent({
+    const geminiClient = getClient(); // This will throw if the key is missing
+    const response = await geminiClient.models.generateContent({
       model: "gemini-2.5-flash",
       contents: PROMPT,
       config: {
@@ -55,11 +79,20 @@ export const generateQuizQuestions = async (): Promise<Question[]> => {
     });
     
     const jsonText = response.text.trim();
+    if (!jsonText) {
+        throw new Error("Received an empty response from the AI. Please try again.");
+    }
+
     const questions = JSON.parse(jsonText) as Question[];
     return questions;
 
   } catch (error) {
     console.error("Error generating quiz questions:", error);
-    throw new Error("Failed to generate quiz questions. Please check your API key and try again.");
+    if (error instanceof Error) {
+        // Re-throw the original error to be displayed in the UI.
+        throw error;
+    }
+    // Fallback for non-Error exceptions
+    throw new Error("An unknown error occurred while generating questions.");
   }
 };

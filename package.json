@@ -2,14 +2,11 @@
   "name": "acio-exam-prep",
   "private": true,
   "version": "0.0.0",
-  "homepage": "https://sahalpv.github.io/ACIO-Exam-test",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist -r https://github.com/sahalpv/ACIO-Exam-test.git"
+    "preview": "vite preview"
   },
   "dependencies": {
     "react": "^19.1.1",
